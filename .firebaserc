@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "restricted-73bf6",
+    "prd": "restricted-73bf6"
+  },
+  "targets": {},
+  "etags": {}
+}
