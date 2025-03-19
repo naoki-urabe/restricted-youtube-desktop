@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from './firebase'
+import { db } from './firebase';
 import { auth, login, logout } from "./auth";
 import { onAuthStateChanged } from "firebase/auth";
 
 export default function YouTubeWhitelist() {
-  const [user, setUser] = useState<any>("");
+  const [user, setUser] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if(currentUser == null)return;
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
+
   useEffect(() => {
     const fetchVideos = async () => {
       const querySnapshot = await getDocs(query(collection(db, "restricted-youtube"), orderBy("publishedAt", "desc")));
@@ -23,7 +24,11 @@ export default function YouTubeWhitelist() {
     };
 
     fetchVideos();
-  }, []);  // 空の依存配列でコンポーネントがマウントされたときのみ実行
+  }, []);
+
+  const handleThumbnailClick = (videoId: string) => {
+    setSelectedVideo(videoId);
+  };
 
   return (
     <div className="p-4">
@@ -39,13 +44,22 @@ export default function YouTubeWhitelist() {
             {videos.map((video) => (
               <div key={video.videoId} className="flex flex-col items-center">
                 <h3 className="text-lg font-semibold mb-2">{video.title}</h3>
-                <iframe
-                  width="560"
-                  height="315"
-                  src={`https://www.youtube.com/embed/${video.videoId}`}
-                  title={video.title}
-                  allowFullScreen
-                ></iframe>
+                <img
+                  src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
+                  alt={video.title}
+                  onClick={() => handleThumbnailClick(video.videoId)}
+                  className="cursor-pointer"
+                />
+                {selectedVideo === video.videoId && (
+                  <iframe
+                    width="560"
+                    height="315"
+                    src={`https://www.youtube.com/embed/${video.videoId}`}
+                    title={video.title}
+                    allowFullScreen
+                    className="mt-4"
+                  ></iframe>
+                )}
               </div>
             ))}
           </div>
