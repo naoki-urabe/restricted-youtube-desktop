@@ -11,7 +11,7 @@ setGlobalOptions({region: "asia-northeast1"})
 const YOUTUBE_API_KEY = functions.params.defineSecret('YOUTUBE_API_KEY')
 
 // YouTube APIのURL
-const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/search';
+const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
 
 // 型定義
 // interface YouTubeVideoItem {
@@ -43,49 +43,32 @@ const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/search';
 //   items: YouTubeSearchItem[];
 // }
 
-interface YouTubeSearchItem {
-  kind: string;
-  etag: string;
-  id: YouTubeSearchItemId;
-  snippet: YouTubeSearchSnippet;
+
+async function getUploadsPlaylistId(channelId: string) {
+  const url = `${YOUTUBE_API_URL}/channels?key=${YOUTUBE_API_KEY.value()}&id=${channelId}&part=contentDetails`;
+  const response = await fetch(url);
+  const data = await response.json();
+  if (!data.items || data.items.length === 0) {
+    throw new Error("チャンネルが見つかりません");
+  }
+
+  return data.items[0].contentDetails.relatedPlaylists.uploads;
 }
 
-interface YouTubeSearchItemId {
-  kind: string;
-  videoId?: string;  // 動画IDが含まれる場合
-  playlistId?: string;  // プレイリストIDが含まれる場合
-  channelId?: string;  // チャンネルIDが含まれる場合
-}
+async function getAllVideosFromPlaylist(playlistId: string) {
+  const videos = [];
+  let nextPageToken = "";
 
-interface YouTubeSearchSnippet {
-  publishedAt: string;
-  channelId: string;
-  title: string;
-  description: string;
-  thumbnails: YouTubeThumbnails;
-  channelTitle: string;
-  liveBroadcastContent: string;
-}
-
-interface YouTubeThumbnails {
-  default: YouTubeThumbnail;
-  medium: YouTubeThumbnail;
-  high: YouTubeThumbnail;
-}
-
-interface YouTubeThumbnail {
-  url: string;
-  width: number;
-  height: number;
-}
-
-interface YouTubeVideo {
-  title: string;
-  videoId: string;
-  description: string;
-  thumbnailUrl: string;
-  publishedAt: string;
-  channelId: string; // チャンネルIDを保存
+  do {
+    const url = `${YOUTUBE_API_URL}/playlistItems?key=${YOUTUBE_API_KEY.value()}&playlistId=${playlistId}&part=snippet&maxResults=50&pageToken=${nextPageToken}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.items) {
+      videos.push(...data.items);
+    }
+    nextPageToken = data.nextPageToken || null;
+  } while (nextPageToken);
+  return videos;
 }
 
 
@@ -103,17 +86,17 @@ export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY]},as
     const batch = admin.firestore().batch();
 
     for (const channelId of channelIds) {
-      const response = await fetch(`${YOUTUBE_API_URL}?part=snippet&channelId=${channelId}&maxResults=50&order=date&key=${process.env.YOUTUBE_API_KEY}`);
-      const json = await response.json();
-      const videos = json.items.map((item: YouTubeSearchItem) => {
-          const doc = admin.firestore().collection('restricted-youtube').doc(item.id.videoId!)
-          if(!doc){
-            console.log("video exists")
+      const playlistId = await getUploadsPlaylistId(channelId);
+      const allVideos = await getAllVideosFromPlaylist(playlistId);
+      const videoPromises = allVideos.map(async (item) => {
+        const videoId = item.snippet.resourceId.videoId;
+        const doc = await (admin.firestore().collection('restricted-youtube').doc(videoId)).get();
+          if(doc.exists){
             return;
           }
           return {
             title: item.snippet.title,
-            videoId: item.id.videoId,
+            videoId: videoId,
             description: item.snippet.description,
             thumbnailUrl: item.snippet.thumbnails.high.url,
             publishedAt: item.snippet.publishedAt,
@@ -121,9 +104,10 @@ export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY]},as
           }
         }
       );
+      const videos = (await Promise.all(videoPromises)).filter((video) => video != null);
       // 動画データをFirestoreに保存
       const videosRef = admin.firestore().collection('restricted-youtube');
-      videos.forEach((video: YouTubeVideo) => {
+      videos.forEach((video) => {
         const videoRef = videosRef.doc(video.videoId);  // 新しいドキュメントを作成
         batch.set(videoRef, video);
       });
