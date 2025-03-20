@@ -90,10 +90,9 @@ interface YouTubeVideo {
 
 
 // Cloud Function: 複数チャンネルから動画情報を取得してFirestoreに保存
-export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY]},async (req, res) => {
+export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY]},async () => {
 
-  const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg"];
-  console.log(req,res);
+  const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg", "UCHp2q2i85qt_9nn2H7AvGOw", "UCtG3StnbhxHxXfE6Q4cPZwQ"];
   if (!channelIds || channelIds.length === 0) {
     //res.status(400).send('Channel IDs are required');
     // return; // void型を返すためにreturnを追加
@@ -106,21 +105,27 @@ export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY]},as
     for (const channelId of channelIds) {
       const response = await fetch(`${YOUTUBE_API_URL}?part=snippet&channelId=${channelId}&maxResults=50&order=date&key=${process.env.YOUTUBE_API_KEY}`);
       const json = await response.json();
-      console.log(json)
-      const videos = json.items.map((item: YouTubeSearchItem) => ({
-        title: item.snippet.title,
-        videoId: item.id.videoId,
-        description: item.snippet.description,
-        thumbnailUrl: item.snippet.thumbnails.high.url,
-        publishedAt: item.snippet.publishedAt,
-        channelId: channelId,  // チャンネルIDを保存
-      }));
+      const videos = json.items.map((item: YouTubeSearchItem) => {
+          const doc = admin.firestore().collection('restricted-youtube').doc(item.id.videoId!)
+          if(!doc){
+            console.log("video exists")
+            return;
+          }
+          return {
+            title: item.snippet.title,
+            videoId: item.id.videoId,
+            description: item.snippet.description,
+            thumbnailUrl: item.snippet.thumbnails.high.url,
+            publishedAt: item.snippet.publishedAt,
+            channelId: channelId,  // チャンネルIDを保存
+          }
+        }
+      );
       // 動画データをFirestoreに保存
       const videosRef = admin.firestore().collection('restricted-youtube');
       videos.forEach((video: YouTubeVideo) => {
-        const videoRef = videosRef.doc();  // 新しいドキュメントを作成
+        const videoRef = videosRef.doc(video.videoId);  // 新しいドキュメントを作成
         batch.set(videoRef, video);
-        console.log(video)
       });
     }
 
