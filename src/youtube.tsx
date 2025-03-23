@@ -1,22 +1,12 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy, DocumentData, where } from "firebase/firestore";
 import { db } from "./firebase";
-import { auth, login, logout } from "./auth";
-import { onAuthStateChanged, User } from "firebase/auth";
 
 export default function YouTubeWhitelist() {
-  const [user, setUser] = useState<User>();
   const [videosByChannel, setVideosByChannel] = useState<Record<string, DocumentData[]>>({});
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [channels, setChannels] = useState<DocumentData[]>([]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser!);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -81,14 +71,7 @@ export default function YouTubeWhitelist() {
 
   return (
     <div className="p-4">
-      {user ? (
         <>
-          <button
-            onClick={logout}
-            className="mb-4 p-2 bg-red-500 text-white rounded"
-          >
-            ログアウト
-          </button>
 
           {/* タブの表示 */}
           <div className="flex space-x-4 mb-4 border-b">
@@ -130,14 +113,6 @@ export default function YouTubeWhitelist() {
             </div>
           )}
         </>
-      ) : (
-        <button
-          onClick={login}
-          className="p-2 bg-green-500 text-white rounded"
-        >
-          Googleでログイン
-        </button>
-      )}
     </div>
   );
 }

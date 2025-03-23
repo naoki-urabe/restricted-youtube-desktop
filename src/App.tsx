@@ -1,15 +1,56 @@
-import YouTube from './youtube'
-import './App.css'
+import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { auth, login, logout } from "./auth";
+import { onAuthStateChanged, User } from "firebase/auth";
+import YouTube from "./youtube";
+import FormPage from "./pages/FormPage";
+import "./App.css";
 
 function App() {
+  const [user, setUser] = useState<User>();
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser!);
+    });
+    return () => unsubscribe();
+  }, []);
   return (
     <>
-      <h1>Restricted youtube</h1>
-      <div className="card">
-        <YouTube />
-      </div>
+    {user ? (
+      <>
+      <button
+        onClick={logout}
+        className="mb-4 p-2 bg-red-500 text-white rounded"
+      >
+        ログアウト
+      </button>
+    <Router>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <h1>Restricted YouTube</h1>
+              <div className="card">
+                <YouTube />
+              </div>
+            </>
+          }
+        />
+        <Route path="/form" element={<FormPage />} />
+      </Routes>
+    </Router>
     </>
+    ) : (
+      <button
+        onClick={login}
+        className="p-2 bg-green-500 text-white rounded"
+      >
+        Googleでログイン
+      </button>
+    )}
+  </>
   )
 }
 
-export default App
+export default App;
