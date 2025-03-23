@@ -25,6 +25,11 @@ function App() {
         ログアウト
       </button>
     <Router>
+        <nav>
+          <Link to="/form">チャンネル登録</Link>
+          <br></br>
+          <Link to="/">ホーム</Link>
+        </nav>
       <Routes>
         <Route
           path="/"
