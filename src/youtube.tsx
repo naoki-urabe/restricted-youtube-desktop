@@ -2,18 +2,18 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy, DocumentData, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { auth, login, logout } from "./auth";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 export default function YouTubeWhitelist() {
-  const [user, setUser] = useState<any>(null);
-  const [videosByChannel, setVideosByChannel] = useState<Record<string, any[]>>({});
+  const [user, setUser] = useState<User>();
+  const [videosByChannel, setVideosByChannel] = useState<Record<string, DocumentData[]>>({});
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [channels, setChannels] = useState<DocumentData[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      setUser(currentUser!);
     });
     return () => unsubscribe();
   }, []);
@@ -24,7 +24,7 @@ export default function YouTubeWhitelist() {
       const querySnapshot = await getDocs(q);
       const videoList = querySnapshot.docs.map((doc) => doc.data());
       // チャンネルごとにグループ化
-      const groupedVideos: Record<string, any[]> = {};
+      const groupedVideos: Record<string, DocumentData[]> = {};
       videoList.forEach((video) => {
         const channel = video.channelName || "その他";
         if (!groupedVideos[channel]) {
@@ -37,7 +37,6 @@ export default function YouTubeWhitelist() {
       // setSelectedChannel(Object.keys(groupedVideos)[0] || null);
     };
     const fetchChannels = async () => {
-      console.log(selectedChannel);
       const querySnapshot = await getDocs(query(collection(db, "allowed-channel")));
       const channelList = querySnapshot.docs.map((doc) => doc.data());
       setChannels(channelList);
@@ -60,8 +59,8 @@ export default function YouTubeWhitelist() {
         const querySnapshot = await getDocs(q);
         const videoList = querySnapshot.docs.map((doc) => doc.data());
         // チャンネルごとにグループ化
-        const groupedVideos: Record<string, any[]> = {};
-        videoList.forEach((video) => {
+        const groupedVideos: Record<string, DocumentData[]> = {};
+        videoList.forEach((video: DocumentData) => {
           const channel = video.channelId;
           if (!groupedVideos[channel]) {
             groupedVideos[channel] = [];
