@@ -4,6 +4,7 @@ import { auth, login, logout } from "./auth";
 import { onAuthStateChanged, User } from "firebase/auth";
 import YouTube from "./youtube";
 import FormPage from "./pages/FormPage";
+import RegisterVideo from "./pages/RegisterVideo";
 import "./App.css";
 
 function App() {
@@ -28,6 +29,8 @@ function App() {
         <nav>
           <Link to="/form">チャンネル登録</Link>
           <br></br>
+          <Link to="/video">ビデオ登録</Link>
+          <br></br>
           <Link to="/">ホーム</Link>
         </nav>
       <Routes>
@@ -43,6 +46,7 @@ function App() {
           }
         />
         <Route path="/form" element={<FormPage />} />
+        <Route path="/video" element={<RegisterVideo></RegisterVideo>} />
       </Routes>
     </Router>
     </>
