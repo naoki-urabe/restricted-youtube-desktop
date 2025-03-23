@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy, DocumentData, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { auth, login, logout } from "./auth";
@@ -109,7 +109,7 @@ export default function YouTubeWhitelist() {
             <div className="grid grid-cols-1 gap-4">
               {videosByChannel[selectedChannel]?.map((video) => (
                 <div key={video.videoId} className="flex flex-col items-center">
-                  <h3 className="text-lg font-semibold mb-2">{video.title}</h3>
+                  <h3 className="text-lg font-semibold mb-2">{video.title}<br></br>{video.publishedAt}</h3>
                   <img
                     src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
                     alt={video.title}
@@ -118,8 +118,8 @@ export default function YouTubeWhitelist() {
                   />
                   {selectedVideo === video.videoId && (
                     <iframe
-                      width="560"
-                      height="315"
+                      width="1120"
+                      height="630"
                       src={`https://www.youtube.com/embed/${video.videoId}`}
                       title={video.title}
                       allowFullScreen
