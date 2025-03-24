@@ -86,6 +86,18 @@ const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
     height: number;
   };
 
+async function registerChannel(channel: string) {
+  const doc = admin.firestore().collection('allowed-channel')
+  const channelDoc = await (doc.where("channel", "==", channel)).get();
+  if(channelDoc.empty){
+    const channelInfo = {
+      channel: channel,
+      channel_id: channel
+    };  // 新しいドキュメントを作成
+    doc.add(channelInfo);
+  }
+}
+
 async function getYoutubeVideo(videoId: string) {
   const videos = [];
   const url = `${YOUTUBE_API_URL}/videos?id=${videoId}&key=${YOUTUBE_API_KEY.value()}&part=snippet,contentDetails`
@@ -97,7 +109,7 @@ async function getYoutubeVideo(videoId: string) {
   return videos;
 }
 
-async function saveVideoInfos(videoId: string, allVideos: YouTubeSearchItem[]) {
+async function saveVideoInfos(channel: string, videoId: string, allVideos: YouTubeSearchItem[]) {
   const batch = admin.firestore().batch();
   const videoPromises = allVideos!.map(async (item) => {
     const doc = await (admin.firestore().collection('restricted-youtube').doc(videoId!)).get();
@@ -110,7 +122,7 @@ async function saveVideoInfos(videoId: string, allVideos: YouTubeSearchItem[]) {
         description: item.snippet.description,
         thumbnailUrl: item.snippet.thumbnails.high.url,
         publishedAt: item.snippet.publishedAt,
-        channelId: "others",  // チャンネルIDを保存
+        channelId: channel,  // チャンネルIDを保存
       }
     }
   );
@@ -128,7 +140,9 @@ async function saveVideoInfos(videoId: string, allVideos: YouTubeSearchItem[]) {
 // Cloud Function: 複数チャンネルから動画情報を取得してFirestoreに保存
 export const saveOtherVideo = onRequest({secrets: [YOUTUBE_API_KEY], timeoutSeconds: 540},async (res) => {
   //const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg", "UCHp2q2i85qt_9nn2H7AvGOw", "UCtG3StnbhxHxXfE6Q4cPZwQ"];
+  const channel: string = res.query.channel as string
   const videoId: string = res.query.videoId as string
+  await registerChannel(channel);
   const video = await getYoutubeVideo(videoId)
-  await saveVideoInfos(videoId, video)
+  await saveVideoInfos(channel, videoId, video)
 });
