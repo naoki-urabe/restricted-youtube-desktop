@@ -32,8 +32,6 @@ export default function YouTubeWhitelist() {
       setChannels(channelList);
       //setSelectedChannel(channelList[0].channel_id);
     }
-
-
     fetchChannels();
     fetchVideos();
   }, []);
@@ -69,10 +67,15 @@ export default function YouTubeWhitelist() {
     setSelectedVideo(videoId);
   };
 
+  const handleUpdate = async () => {
+    const q = "https://asia-northeast1-restricted-73bf6.cloudfunctions.net/fetchVideosFromChannels"
+    await fetch(q);
+  }
+
   return (
     <div className="p-4">
         <>
-
+          <button onClick={handleUpdate}>更新</button>
           {/* タブの表示 */}
           <div className="flex space-x-4 mb-4 border-b">
             {channels?.map((channel) => (

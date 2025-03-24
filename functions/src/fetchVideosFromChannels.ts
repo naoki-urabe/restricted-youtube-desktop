@@ -93,7 +93,8 @@ async function getUploadsPlaylistId(channelId: string) {
   const response = await fetch(url);
   const data = await response.json();
   if (!data.items || data.items.length === 0) {
-    throw new Error("チャンネルが見つかりません");
+    return null;
+    // throw new Error("チャンネルが見つかりません");
   }
 
   return data.items[0].contentDetails.relatedPlaylists.uploads;
@@ -207,6 +208,9 @@ export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY], ti
       if(updatedAt == null) {
         console.log("first fetch")
         const playlistId = await getUploadsPlaylistId(channelId);
+        if(playlistId == null){
+          continue;
+        }
         allVideos = await getAllVideosFromPlaylist(playlistId, channelId);
         saveVideoInfos(allVideos, channelId);
       } else {
