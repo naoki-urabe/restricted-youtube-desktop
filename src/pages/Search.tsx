@@ -23,7 +23,8 @@ export default function Search() {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null); // ←追加
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [searchTrigger, setSearchTrigger] = useState(false); // ←検索ボタン押下フラグ
 
   // Firestore から許可チャンネル取得
   useEffect(() => {
@@ -36,15 +37,7 @@ export default function Search() {
     fetchChannels();
   }, []);
 
-  // 選択チャンネル or キーワードが変わったら動画取得
-  useEffect(() => {
-    if (!selectedChannel) return;
-    setVideos([]);
-    setNextPageToken(null);
-    setSelectedVideoId(null); // ←動画切り替え時に選択解除
-    fetchVideos(false);
-  }, [selectedChannel, searchKeyword]);
-
+  // API を呼ぶ処理
   const fetchVideos = async (isNextPage: boolean) => {
     if (!selectedChannel) return;
     setLoading(true);
@@ -77,19 +70,41 @@ export default function Search() {
     setLoading(false);
   };
 
+  // 検索ボタン押下
+  const handleSearch = () => {
+    setVideos([]);
+    setNextPageToken(null);
+    setSelectedVideoId(null);
+    setSearchTrigger(prev => !prev); // フラグ反転で useEffect をトリガー
+  };
+
+  // 検索ボタン押下時に API を呼ぶ
+  useEffect(() => {
+    if (!selectedChannel) return;
+    fetchVideos(false);
+  }, [searchTrigger, selectedChannel]);
+
   const handleThumbnailClick = (videoId: string) => {
-    setSelectedVideoId(videoId); // クリックで選択
+    setSelectedVideoId(videoId);
   };
 
   return (
     <div className="p-4">
-      <input
-        type="text"
-        placeholder="検索"
-        value={searchKeyword}
-        onChange={e => setSearchKeyword(e.target.value)}
-        className="mb-4 p-2 border rounded w-full"
-      />
+      <div className="flex mb-4">
+        <input
+          type="text"
+          placeholder="検索"
+          value={searchKeyword}
+          onChange={e => setSearchKeyword(e.target.value)}
+          className="p-2 border rounded w-full"
+        />
+        <button
+          onClick={handleSearch}
+          className="ml-2 p-2 bg-blue-500 text-white rounded"
+        >
+          検索
+        </button>
+      </div>
 
       <div className="flex space-x-4 mb-4 border-b">
         {channels.map(ch => (
@@ -114,7 +129,6 @@ export default function Search() {
               className="cursor-pointer"
               onClick={() => handleThumbnailClick(v.videoId)}
             />
-
             {selectedVideoId === v.videoId && (
               <iframe
                 width="560"

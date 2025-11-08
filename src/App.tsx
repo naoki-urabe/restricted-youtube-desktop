@@ -5,6 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import YouTube from "./youtube";
 import FormPage from "./pages/FormPage";
 import RegisterVideo from "./pages/RegisterVideo";
+import Search from "./pages/Search";
 import "./App.css";
 
 function App() {
@@ -31,6 +32,8 @@ function App() {
           <br></br>
           <Link to="/video">ビデオ登録</Link>
           <br></br>
+          <Link to="/search">検索</Link>
+          <br></br>
           <Link to="/">ホーム</Link>
         </nav>
       <Routes>
@@ -47,6 +50,7 @@ function App() {
         />
         <Route path="/form" element={<FormPage />} />
         <Route path="/video" element={<RegisterVideo></RegisterVideo>} />
+        <Route path="/search" element={<Search></Search>} />
       </Routes>
     </Router>
     </>
