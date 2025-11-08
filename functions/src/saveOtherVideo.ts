@@ -86,13 +86,13 @@ const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
     height: number;
   };
 
-async function registerChannel(channel: string) {
+async function registerChannel(channel: string, channel_id: string) {
   const doc = admin.firestore().collection('allowed-channel')
   const channelDoc = await (doc.where("channel", "==", channel)).get();
   if(channelDoc.empty){
     const channelInfo = {
       channel: channel,
-      channel_id: channel
+      channel_id: channel_id
     };  // 新しいドキュメントを作成
     doc.add(channelInfo);
   }
@@ -142,7 +142,10 @@ export const saveOtherVideo = onRequest({secrets: [YOUTUBE_API_KEY], timeoutSeco
   //const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg", "UCHp2q2i85qt_9nn2H7AvGOw", "UCtG3StnbhxHxXfE6Q4cPZwQ"];
   const channel: string = res.query.channel as string
   const videoId: string = res.query.videoId as string
-  await registerChannel(channel);
+  if(channel == null || videoId == null) {
+    return
+  }
+  await registerChannel(channel, videoId);
   const video = await getYoutubeVideo(videoId)
   await saveVideoInfos(channel, videoId, video)
 });

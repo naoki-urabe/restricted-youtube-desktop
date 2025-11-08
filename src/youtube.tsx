@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy, DocumentData, where } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, DocumentData, where, limit } from "firebase/firestore";
 import { db } from "./firebase";
 
 export default function YouTubeWhitelist() {
+  const PAGE_SIZE = 20
   const [videosByChannel, setVideosByChannel] = useState<Record<string, DocumentData[]>>({});
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export default function YouTubeWhitelist() {
         return;
       }
       try {
-        const q = query(collection(db, "restricted-youtube"),where("channelId", "==", selectedChannel) , orderBy("publishedAt", "desc"))
+        const q = query(collection(db, "restricted-youtube"),where("channelId", "==", selectedChannel) , orderBy("publishedAt", "desc"), limit(PAGE_SIZE))
         const querySnapshot = await getDocs(q);
         const videoList = querySnapshot.docs.map((doc) => doc.data());
         // チャンネルごとにグループ化
