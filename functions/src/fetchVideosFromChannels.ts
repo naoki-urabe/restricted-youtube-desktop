@@ -91,7 +91,16 @@ const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
 async function getUploadsPlaylistId(channelId: string) {
   const url = `${YOUTUBE_API_URL}/channels?key=${YOUTUBE_API_KEY.value()}&id=${channelId}&part=contentDetails`;
   const response = await fetch(url);
-  const data = await response.json();
+  const rawBody = await response.text()
+  if(!response.ok) {
+    console.error("[getUploadsPlaylistId] YouTube API returned non-2xx", {
+      channelId,
+      status: response.status,
+      statusText: response.statusText,
+      body: rawBody 
+    })
+  }
+  const data = JSON.parse(rawBody);
   if (!data.items || data.items.length === 0) {
     return null;
     // throw new Error("チャンネルが見つかりません");
@@ -113,19 +122,25 @@ async function getAllVideosFromPlaylist(playlistId: string, channelId: string) {
       videos.push(...data.items);
     }
     if(counter%20==0){
-      saveVideoInfos(videos, channelId);
+      await saveVideoInfos(videos, channelId);
       videos.length = 0;
     }
     nextPageToken = data.nextPageToken || null;
   } while (nextPageToken);
-  if(counter)saveVideoInfos(videos,channelId);
+  if(counter)await saveVideoInfos(videos,channelId);
   return videos;
 }
 
-async function getChannelUpdatedAt(channelId: string) {
-  const doc = await (admin.firestore().collection('allowed-channel').doc(channelId)).get();
+async function getChannelUpdatedAt(docId: string) {
+  const doc = await (admin.firestore().collection('allowed-channel').doc(docId)).get();
   const updatedAt = doc.data()?.updatedAt
   return updatedAt
+}
+
+async function getChannelId(docId: string) {
+  const doc = await (admin.firestore().collection('allowed-channel').doc(docId)).get();
+  const channelId = doc.data()?.channel_id
+  return channelId
 }
 
 async function getPeriodYoutube(channelId: string, updatedAt: Timestamp) {
@@ -142,21 +157,27 @@ async function getPeriodYoutube(channelId: string, updatedAt: Timestamp) {
       videos.push(...data.items);
     }
     if(counter%20==0){
-      saveVideoInfos(videos, channelId);
+      await saveVideoInfos(videos, channelId);
       videos.length = 0
     }
     nextPageToken = data.nextPageToken || null;
   } while (nextPageToken);
-  if(counter)saveVideoInfos(videos,channelId);
+  if(counter)await saveVideoInfos(videos,channelId);
   return videos;
 }
 
-async function fetchChannelIds(channelIds: string[]) {
-  const channelInfos = await (admin.firestore().collection('allowed-channel').get())
-  channelInfos.forEach((doc)=>{
-    const data = doc.data()
-    channelIds.push(data.channel_id);
-  });
+async function fetchDocIds(docIds: string[]) {
+  await (admin.firestore().collection('allowed-channel').get()
+  .then(
+    (snapshot) => {
+      snapshot.docs.forEach(
+        (doc => {
+          docIds.push(doc.id)
+        }
+      )
+    )
+  }
+  ))
 }
 
 async function saveVideoInfos(allVideos: YouTubeSearchItem[], channelId: string) {
@@ -193,17 +214,21 @@ async function saveVideoInfos(allVideos: YouTubeSearchItem[], channelId: string)
 // Cloud Function: 複数チャンネルから動画情報を取得してFirestoreに保存
 export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY], timeoutSeconds: 540},async () => {
   //const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg", "UCHp2q2i85qt_9nn2H7AvGOw", "UCtG3StnbhxHxXfE6Q4cPZwQ"];
-  const channelIds: string[] = []
-  await fetchChannelIds(channelIds)
-  if (!channelIds || channelIds.length === 0) {
+  const docIds: string[] = []
+  await fetchDocIds(docIds)
+  if (!docIds || docIds.length === 0) {
     //res.status(400).send('Channel IDs are required');
     // return; // void型を返すためにreturnを追加
   }
 
   try {
     // Firestoreのバッチ書き込みを開始
-    for (const channelId of channelIds) {
-      const updatedAt = await getChannelUpdatedAt(channelId);
+    for (const docId of docIds) {
+      if(docId == null || docId == "") {
+        continue
+      }
+      const updatedAt = await getChannelUpdatedAt(docId);
+      const channelId = await getChannelId(docId)
       let allVideos
       if(updatedAt == null) {
         console.log("first fetch")
@@ -212,14 +237,14 @@ export const fetchVideosFromChannels = onRequest({secrets: [YOUTUBE_API_KEY], ti
           continue;
         }
         allVideos = await getAllVideosFromPlaylist(playlistId, channelId);
-        saveVideoInfos(allVideos, channelId);
+        await saveVideoInfos(allVideos, channelId);
       } else {
         console.log("movies exists")
         allVideos = await getPeriodYoutube(channelId, updatedAt);
-        saveVideoInfos(allVideos, channelId);
+        await saveVideoInfos(allVideos, channelId);
       }
-      const doc = (admin.firestore().collection('allowed-channel').doc(channelId))
-      doc.set({updatedAt: FieldValue.serverTimestamp()},{merge: true})
+      const doc = (admin.firestore().collection('allowed-channel').doc(docId))
+      await doc.set({updatedAt: FieldValue.serverTimestamp()},{merge: true})
     }
 
     // 正常終了時のレスポンス
