@@ -6,6 +6,7 @@ import YouTube from "./youtube";
 import FormPage from "./pages/FormPage";
 import RegisterVideo from "./pages/RegisterVideo";
 import Search from "./pages/Search";
+import Home from "./pages/Home";
 import "./App.css";
 
 function App() {
@@ -37,20 +38,11 @@ function App() {
           <Link to="/">ホーム</Link>
         </nav>
       <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <h1>Restricted YouTube</h1>
-              <div className="card">
-                <YouTube />
-              </div>
-            </>
-          }
-        />
+        <Route path="/" element={<Home />} />
+        <Route path="/channel/:channelId" element={<>...<YouTube />...</>} />
         <Route path="/form" element={<FormPage />} />
         <Route path="/video" element={<RegisterVideo></RegisterVideo>} />
-        <Route path="/search" element={<Search></Search>} />
+        <Route path="/search/:channelId?" element={<Search></Search>} />
       </Routes>
     </Router>
     </>
