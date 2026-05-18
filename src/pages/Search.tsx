@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -25,6 +26,8 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [searchTrigger, setSearchTrigger] = useState(false); // ←検索ボタン押下フラグ
+  const { channelId } = useParams<{ channelId: string }>();
+  const navigate = useNavigate();
 
   // Firestore から許可チャンネル取得
   useEffect(() => {
@@ -32,7 +35,12 @@ export default function Search() {
       const snapshot = await getDocs(collection(db, "allowed-channel"));
       const list = snapshot.docs.map(doc => doc.data() as Channel);
       setChannels(list);
-      if (list[0]) setSelectedChannel(list[0].channel_id);
+      if (channelId) {
+        setSelectedChannel(channelId);
+      } else if (list[0]) {
+        setSelectedChannel(list[0].channel_id);
+        navigate(`/search/${list[0].channel_id}`, { replace: true })
+      }
     };
     fetchChannels();
   }, []);
@@ -110,7 +118,10 @@ export default function Search() {
         {channels.map(ch => (
           <button
             key={ch.channel_id}
-            onClick={() => setSelectedChannel(ch.channel_id)}
+            onClick={() => {
+              setSelectedChannel(ch.channel_id)
+              navigate(`/search/${ch.channel_id}`)
+            }}
             className={`p-2 ${selectedChannel === ch.channel_id ? "border-b-2 border-blue-500 font-bold" : ""}`}
           >
             {ch.channel}

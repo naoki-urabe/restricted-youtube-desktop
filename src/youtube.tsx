@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   collection,
   getDocs,
@@ -26,6 +27,8 @@ export default function YouTubeWhitelist() {
 
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
+  const { channelId } = useParams<{ channelId: string }>();
+  const navigate = useNavigate();
   // -----------------------
   // チャンネル一覧
   // -----------------------
@@ -35,8 +38,8 @@ export default function YouTubeWhitelist() {
       const list = snap.docs.map(d => d.data());
       setChannels(list);
 
-      if (list.length > 0) {
-        setSelectedChannel(list[0].channel_id);
+      if (channelId) {
+        setSelectedChannel(channelId);
       }
     };
     fetchChannels();
@@ -133,7 +136,10 @@ export default function YouTubeWhitelist() {
         {channels.map(channel => (
           <button
             key={channel.channel_id}
-            onClick={() => setSelectedChannel(channel.channel_id)}
+            onClick={() => {
+              setSelectedChannel(channel.channel_id);
+              navigate(`/channel/${channel.channel_id}`)
+            }}
             className={`p-2 ${
               selectedChannel === channel.channel_id
                 ? "border-b-2 border-blue-500 font-bold"
