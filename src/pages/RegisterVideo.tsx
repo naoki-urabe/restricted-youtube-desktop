@@ -4,7 +4,7 @@ import { db } from "../firebase";
 
 const RegisterVideo = () => {
   const [videoId, setVideoId] = useState("");
-  const [channel, setChannel] = useState("");
+  const [channelId, setChannelId] = useState("");
   const [channels, setChannels] = useState<DocumentData[]>([]);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ const RegisterVideo = () => {
       const channelList = querySnapshot.docs.map((doc) => doc.data());
       setChannels(channelList);
       if (channelList[0]) {
-        setChannel(channelList[0].channel_id);
+        setChannelId(channelList[0].channel_id);
       }
     };
     fetchChannels();
@@ -22,7 +22,7 @@ const RegisterVideo = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoId) return alert("すべてのフィールドを入力してください");
-    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channel=${channel}&videoId=${videoId}`;
+    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channel=${channelId}&videoId=${videoId}`;
     try {
       const res = await fetch(url);
       console.log(res);
@@ -37,7 +37,7 @@ const RegisterVideo = () => {
       <form onSubmit={handleSubmit}>
         <div>
           <label>カテゴリ名: </label>
-          <select value={channel} onChange={(e) => setChannel(e.target.value)}>
+          <select value={channelId} onChange={(e) => setChannelId(e.target.value)}>
             {channels.map((ch) => (
               <option key={ch.channel_id} value={ch.channel_id}>
                 {ch.channel}
