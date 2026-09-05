@@ -142,6 +142,11 @@ export const saveOtherVideo = onRequest({secrets: [YOUTUBE_API_KEY], cors: true,
     return
   }
   const video = await getYoutubeVideo(videoId)
+  if(video.length === 0) {
+    console.error(`video not found`)
+    res.status(404).send("video not found")
+    return
+  }
   await saveVideoInfos(channelId, videoId, video)
   res.status(200).send("ok");
 } catch(e) {
