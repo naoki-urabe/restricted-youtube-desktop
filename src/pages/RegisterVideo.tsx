@@ -6,6 +6,7 @@ const RegisterVideo = () => {
   const [videoId, setVideoId] = useState("");
   const [channelId, setChannelId] = useState("");
   const [channels, setChannels] = useState<DocumentData[]>([]);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -25,6 +26,15 @@ const RegisterVideo = () => {
     const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channelId=${channelId}&videoId=${videoId}`;
     try {
       const res = await fetch(url);
+      if(res.status === 404) {
+        setMessage("指定されたビデオが見つかりませんでした");
+        return;
+      }
+      if(!res.ok) {
+        setMessage("ビデオの登録に失敗しました");
+        return;
+      }
+      setMessage("ビデオを登録しました");
       console.log(res);
     } catch (err) {
       console.error(err);
@@ -51,6 +61,7 @@ const RegisterVideo = () => {
         </div>
         <button type="submit">登録</button>
       </form>
+      {message && <p>{message}</p>}
     </div>
   );
 };
