@@ -1,19 +1,32 @@
-import { useState } from "react";
-//import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { collection, getDocs, query, DocumentData } from "firebase/firestore";
+import { db } from "../firebase";
 
 const RegisterVideo = () => {
   const [videoId, setVideoId] = useState("");
   const [channel, setChannel] = useState("");
-  //const navigate = useNavigate();
+  const [channels, setChannels] = useState<DocumentData[]>([]);
+
+  useEffect(() => {
+    const fetchChannels = async () => {
+      const querySnapshot = await getDocs(query(collection(db, "allowed-channel")));
+      const channelList = querySnapshot.docs.map((doc) => doc.data());
+      setChannels(channelList);
+      if (channelList[0]) {
+        setChannel(channelList[0].channel_id);
+      }
+    };
+    fetchChannels();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoId) return alert("すべてのフィールドを入力してください");
-    const query = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channel=${channel}&videoId=${videoId}`
+    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channel=${channel}&videoId=${videoId}`;
     try {
-      const res = await fetch(query);
+      const res = await fetch(url);
       console.log(res);
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     }
   };
@@ -24,7 +37,13 @@ const RegisterVideo = () => {
       <form onSubmit={handleSubmit}>
         <div>
           <label>カテゴリ名: </label>
-          <input value={channel} onChange={(e) => setChannel(e.target.value)} required />
+          <select value={channel} onChange={(e) => setChannel(e.target.value)}>
+            {channels.map((ch) => (
+              <option key={ch.channel_id} value={ch.channel_id}>
+                {ch.channel}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label>ビデオID: </label>
