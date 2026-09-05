@@ -86,18 +86,6 @@ const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3';
     height: number;
   };
 
-async function registerChannel(channel: string, channel_id: string) {
-  const doc = admin.firestore().collection('allowed-channel')
-  const channelDoc = await (doc.where("channel", "==", channel)).get();
-  if(channelDoc.empty){
-    const channelInfo = {
-      channel: channel,
-      channel_id: channel_id
-    };  // 新しいドキュメントを作成
-    doc.add(channelInfo);
-  }
-}
-
 async function getYoutubeVideo(videoId: string) {
   const videos = [];
   const url = `${YOUTUBE_API_URL}/videos?id=${videoId}&key=${YOUTUBE_API_KEY.value()}&part=snippet,contentDetails`
@@ -105,16 +93,20 @@ async function getYoutubeVideo(videoId: string) {
   const data = await response.json();
   if (data.items) {
     videos.push(...data.items);
+  } else {
+    console.error("cannot get video")
+    return []
   }
   return videos;
 }
 
-async function saveVideoInfos(channel: string, videoId: string, allVideos: YouTubeSearchItem[]) {
+async function saveVideoInfos(channelId: string, videoId: string, allVideos: YouTubeSearchItem[]) {
   const batch = admin.firestore().batch();
   const videoPromises = allVideos!.map(async (item) => {
     const doc = await (admin.firestore().collection('restricted-youtube').doc(videoId!)).get();
       if(doc.exists){
-        return;
+        console.error("already video exists")
+        return null;
       }
       return {
         title: item.snippet.title,
@@ -122,7 +114,7 @@ async function saveVideoInfos(channel: string, videoId: string, allVideos: YouTu
         description: item.snippet.description,
         thumbnailUrl: item.snippet.thumbnails.high.url,
         publishedAt: item.snippet.publishedAt,
-        channelId: channel,  // チャンネルIDを保存
+        channelId: channelId,  // チャンネルIDを保存
       }
     }
   );
@@ -138,14 +130,22 @@ async function saveVideoInfos(channel: string, videoId: string, allVideos: YouTu
 }
 
 // Cloud Function: 複数チャンネルから動画情報を取得してFirestoreに保存
-export const saveOtherVideo = onRequest({secrets: [YOUTUBE_API_KEY], timeoutSeconds: 540},async (res) => {
+export const saveOtherVideo = onRequest({secrets: [YOUTUBE_API_KEY], cors: true, timeoutSeconds: 540},async (req, res) => {
+  try {
   //const channelIds: string[] = ["UCZ2bu0qutTOM0tHYa_jkIwg", "UCHp2q2i85qt_9nn2H7AvGOw", "UCtG3StnbhxHxXfE6Q4cPZwQ"];
-  const channel: string = res.query.channel as string
-  const videoId: string = res.query.videoId as string
-  if(channel == null || videoId == null) {
+  const channelId: string = req.query.channelId as string
+  const videoId: string = req.query.videoId as string
+  console.log(`channelId:${channelId} videoId:${videoId}`);
+  if(channelId == null || videoId == null) {
+    console.error("channelId or videoId is not found");
+    res.status(400).send("channelId or videoId is not found");
     return
   }
-  await registerChannel(channel, videoId);
   const video = await getYoutubeVideo(videoId)
-  await saveVideoInfos(channel, videoId, video)
+  await saveVideoInfos(channelId, videoId, video)
+  res.status(200).send("ok");
+} catch(e) {
+  console.error(e)
+  res.status(500).send("error");
+}
 });

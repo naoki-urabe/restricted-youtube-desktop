@@ -22,7 +22,7 @@ const RegisterVideo = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!videoId) return alert("すべてのフィールドを入力してください");
-    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channel=${channelId}&videoId=${videoId}`;
+    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/saveOtherVideo?channelId=${channelId}&videoId=${videoId}`;
     try {
       const res = await fetch(url);
       console.log(res);
