@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
-const PAGE_SIZE = 20;
-
 interface Video {
   videoId: string;
   title: string;
@@ -49,21 +47,15 @@ export default function Search() {
   const fetchVideos = async (isNextPage: boolean) => {
     if (!selectedChannel) return;
     setLoading(true);
-
     const params = new URLSearchParams({
-      part: "snippet",
       channelId: selectedChannel,
-      q: searchKeyword,
-      order: "date",
-      maxResults: PAGE_SIZE.toString(),
-      key: import.meta.env.VITE_API_KEY,
+      searchKeyword: searchKeyword,
     });
-
     if (isNextPage && nextPageToken) {
-      params.append("pageToken", nextPageToken);
+      params.append("nextPageToken", nextPageToken);
     }
-
-    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
+    const url = `https://asia-northeast1-restricted-73bf6.cloudfunctions.net/searchVideo?${params.toString()}`;
+    const res = await fetch(url);
     const data = await res.json();
 
     const newVideos = (data.items || []).map((item: any) => ({
